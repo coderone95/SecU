@@ -1,0 +1,1 @@
+alter table tbl_sec_bank_details add account_holder varchar(255) after sec_name
