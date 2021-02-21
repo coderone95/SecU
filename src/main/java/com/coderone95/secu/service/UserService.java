@@ -1,10 +1,12 @@
 package com.coderone95.secu.service;
 
 import com.coderone95.secu.entity.User;
+import com.coderone95.secu.exceptions.GenericException;
+import com.coderone95.secu.utility.Constants;
 import com.coderone95.secu.utility.CryptUtils;
 import com.coderone95.secu.utility.StringUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.tomcat.util.codec.binary.Base64;
+import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
+import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
@@ -13,18 +15,15 @@ import org.springframework.stereotype.Service;
 import com.coderone95.secu.repository.UserRepository;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.ServletContext;
-import javax.swing.text.html.Option;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service("userService")
 public class UserService {
@@ -38,12 +37,51 @@ public class UserService {
 	@Autowired
 	private Environment env;
 
-	public void saveUser(User u) {
+	public JSONObject saveUser(User u) {
+		JSONObject jsonObject = new JSONObject();
+		boolean isValid = validateEmailAddress(u.getEmail_id());
+		if(!isValid){
+			throw  new GenericException("Invalid Email Address");
+		}
 		String encryptedPwd = CryptUtils.encrypt(u.getPassword(),CryptUtils.cipher_Key);
-		String encryptedProfilePic = CryptUtils.encrypt(u.getProfilePicData(),CryptUtils.cipher_Key);
+		String encryptedProfilePic = CryptUtils.encrypt(u.getProfile_pic_data(),CryptUtils.cipher_Key);
 		u.setPassword(encryptedPwd);
-		u.setProfilePicData(encryptedProfilePic);
-		userRepository.save(u);
+		u.setProfile_pic_data(encryptedProfilePic);
+		User saved = userRepository.save(u);
+		if(saved != null){
+			JSONObject data = new JSONObject();
+			jsonObject.put(Constants.STATUS,Constants.SUCCESS);
+			jsonObject.put(Constants.MESSAGE,"User added successfully");
+			data.put("user_id",saved.getUser_id());
+			data.put("email_id",saved.getEmail_id());
+			data.put("name",saved.getName());
+			jsonObject.put(Constants.DATA,data);
+		}else{
+			throw new GenericException("Erorr while saving user");
+		}
+		return jsonObject;
+	}
+
+	private boolean validateEmailAddress(String email_id) {
+		boolean result = true;
+		try{
+			String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\."+
+					"[a-zA-Z0-9_+&*-]+)*@" +
+					"(?:[a-zA-Z0-9-]+\\.)+[a-z" +
+					"A-Z]{2,7}$";
+
+			Pattern pat = Pattern.compile(emailRegex);
+			if (email_id == null || email_id == "")
+				return false;
+			if(!pat.matcher(email_id).matches()){
+				return false;
+			}
+			InternetAddress emailAddr = new InternetAddress(email_id);
+			emailAddr.validate();
+		}catch (Exception e){
+			result = false;
+		}
+		return result;
 	}
 
 	public boolean isUserExistsByEmail(String emailId) {
@@ -106,8 +144,8 @@ public class UserService {
 		if(!StringUtils.isNullOrBlank(user.getPhone())){
 			u.setPhone(user.getPhone());
 		}
-		if(!StringUtils.isNullOrBlank(user.getProfilePicData())){
-			u.setProfilePicData(user.getProfilePicData());
+		if(!StringUtils.isNullOrBlank(user.getProfile_pic_data())){
+			u.setProfile_pic_data(user.getProfile_pic_data());
 		}
 		userRepository.save(u);
 	}
@@ -119,7 +157,7 @@ public class UserService {
 
 	public Long getUserIdByEmailId(String emailId){
 		User u = userRepository.findByEmailId(emailId);
-		return u.getUserId();
+		return u.getUser_id();
 	}
 
 	public void uploadProfilePic(MultipartFile imageFile, String emailId) throws IOException {
@@ -146,7 +184,7 @@ public class UserService {
 			outputStream.close();
 //			String baseValue = Base64.encodeBase64String(imageFile.getBytes());
 			String encryptedValue = CryptUtils.encrypt(newFile.getPath(),CryptUtils.cipher_Key);
-			u.setProfilePicData(encryptedValue);
+			u.setProfile_pic_data(encryptedValue);
 			userRepository.save(u);
 		}
 	}

@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SecBankDetailsRepository extends JpaRepository<SecBankDetails,Long> {
 
-    @Query(value = "select s from SecBankDetails s s.secName = ?1")
+    @Query(value = "select s from SecBankDetails s Where s.secName = ?1")
     SecBankDetails getBKDetailsBySecName(String secName);
 }

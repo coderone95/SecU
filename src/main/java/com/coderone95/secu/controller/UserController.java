@@ -2,10 +2,12 @@ package com.coderone95.secu.controller;
 
 import com.coderone95.secu.entity.User;
 import com.coderone95.secu.exceptions.GenericException;
+import com.coderone95.secu.model.CustomResponse;
 import com.coderone95.secu.model.SuccessResponse;
 import com.coderone95.secu.service.UserService;
 import com.coderone95.secu.utility.CryptUtils;
 import com.coderone95.secu.utility.StringUtils;
+import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
@@ -22,25 +25,26 @@ public class UserController {
     private UserService userService;
 
     @PostMapping(value="/register")
-    public ResponseEntity<?> addUser(@RequestBody User user){
+    public ResponseEntity<?> addUser(@Valid  @RequestBody User user){
+        JSONObject json = new JSONObject();
         try{
             if(StringUtils.isNullOrBlank(user.getPassword())){
                 throw new GenericException("Password is mandatory");
-            }else if(StringUtils.isNullOrBlank(user.getEmailId())){
+            }else if(StringUtils.isNullOrBlank(user.getEmail_id())){
                 throw new GenericException("Email is mandatory");
             }else{
-                boolean isUserExistsByEmail = userService.isUserExistsByEmail(user.getEmailId());
+                boolean isUserExistsByEmail = userService.isUserExistsByEmail(user.getEmail_id());
                 if(isUserExistsByEmail){
-                    throw new GenericException("User already exists with "+user.getEmailId());
+                    throw new GenericException("User already exists with "+user.getEmail_id());
                 }else{
-                    userService.saveUser(user);
+                    json = userService.saveUser(user);
                 }
             }
         }catch(Exception e){
             throw new GenericException(e.getMessage());
         }
-        SuccessResponse sr = new SuccessResponse("User added successfully", "SUCCESS");
-        return new ResponseEntity<>(sr, HttpStatus.OK);
+        CustomResponse res = new CustomResponse(json);
+        return new ResponseEntity<>(res, HttpStatus.OK);
     }
 
     @PostMapping(value="/validate_user")
@@ -57,8 +61,8 @@ public class UserController {
                     throw new GenericException("Invalid User");
                 }else{
                     User user = userService.getUserByEmailId(emailId);
-                    session.setAttribute("user_id",user.getUserId());
-                    session.setAttribute("user_email",user.getEmailId());
+                    session.setAttribute("user_id",user.getUser_id());
+                    session.setAttribute("user_email",user.getEmail_id());
                 }
             }
         }catch(Exception e){
