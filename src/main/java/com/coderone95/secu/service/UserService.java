@@ -1,10 +1,12 @@
 package com.coderone95.secu.service;
 
+import com.coderone95.secu.beans.SignupBean;
 import com.coderone95.secu.entity.User;
 import com.coderone95.secu.exceptions.GenericException;
 import com.coderone95.secu.utility.Constants;
 import com.coderone95.secu.utility.CryptUtils;
 import com.coderone95.secu.utility.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,17 +39,32 @@ public class UserService {
 	@Autowired
 	private Environment env;
 
-	public JSONObject saveUser(User u) {
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	/**
+	 * Saves the user
+	 * @param signupBean
+	 * @return JSONObject
+	 */
+	public JSONObject saveUser(SignupBean signupBean) {
 		JSONObject jsonObject = new JSONObject();
-		boolean isValid = validateEmailAddress(u.getEmail_id());
+		boolean isValid = validateEmailAddress(signupBean.getEmailId());
 		if(!isValid){
 			throw  new GenericException("Invalid Email Address");
 		}
-		String encryptedPwd = CryptUtils.encrypt(u.getPassword(),CryptUtils.cipher_Key);
-		String encryptedProfilePic = CryptUtils.encrypt(u.getProfile_pic_data(),CryptUtils.cipher_Key);
-		u.setPassword(encryptedPwd);
-		u.setProfile_pic_data(encryptedProfilePic);
-		User saved = userRepository.save(u);
+		String encryptedPwd = CryptUtils.encrypt(signupBean.getPassword(),CryptUtils.cipher_Key);
+		boolean isValidPwd = validatePassword(signupBean.getPassword(),signupBean.getConfirmPassword());
+		if(!isValidPwd){
+			throw  new GenericException("Password not matched");
+		}
+		User user = new User();
+		user.setPassword(encryptedPwd);
+		user.setName(signupBean.getName());
+		user.setPhone(signupBean.getPhone());
+		user.setEmail_id(signupBean.getEmailId());
+		user.setSecret_key(CryptUtils.encrypt(CryptUtils.cipher_Key,signupBean.getSecretKey()));
+		User saved = userRepository.save(user);
 		if(saved != null){
 			JSONObject data = new JSONObject();
 			jsonObject.put(Constants.STATUS,Constants.SUCCESS);
@@ -60,6 +77,13 @@ public class UserService {
 			throw new GenericException("Erorr while saving user");
 		}
 		return jsonObject;
+	}
+
+	private boolean validatePassword(String password, String confirmPassword) {
+		if(StringUtils.isNullOrBlank(password) || StringUtils.isNullOrBlank(confirmPassword)){
+			return false;
+		}
+		return password.equals(confirmPassword);
 	}
 
 	private boolean validateEmailAddress(String email_id) {

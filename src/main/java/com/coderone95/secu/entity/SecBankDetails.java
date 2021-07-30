@@ -11,6 +11,8 @@ import javax.persistence.Table;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import java.util.Date;
+
 @Entity
 @Table(name="tbl_sec_bank_details")
 public class SecBankDetails {
@@ -58,6 +60,17 @@ public class SecBankDetails {
 
 	@Column(name = "account_holder")
 	private String accountHolder;
+
+	@Column(name = "created_at")
+	private Date createdAt;
+
+	@Column(name = "updated_at")
+	private Date updatedAt;
+
+	public SecBankDetails(){
+		this.createdAt = new Date();
+		this.updatedAt = new Date();
+	}
 
 	public Long getSecBKId() {
 		return secBKId;
@@ -161,5 +174,21 @@ public class SecBankDetails {
 
 	public void setAccountHolder(String accountHolder) {
 		this.accountHolder = accountHolder;
+	}
+
+	public Date getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(Date createdAt) {
+		this.createdAt = createdAt;
+	}
+
+	public Date getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public void setUpdatedAt(Date updatedAt) {
+		this.updatedAt = updatedAt;
 	}
 }

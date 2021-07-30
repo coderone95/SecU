@@ -9,8 +9,8 @@ import javax.crypto.spec.DESKeySpec;
 
 
 public class CryptUtils {
-	public final static int UNIT_LENGTH = 20;
-	public static final String cipher_Key =  "AABB09182736CCDD";
+	public final static int UNIT_LENGTH = 8;
+	public static final String cipher_Key =  "SECU@123";
 	private final static String DES = "DES";
 	
 	public static  byte[] encrypt(byte[] src, byte[] key) throws RuntimeException {
@@ -47,13 +47,14 @@ public class CryptUtils {
     }
    
     public final static  String encrypt(String data, String key){
-    	if(data!=null)
+		if(StringUtils.isNullOrBlank(data)){
+			return "";
+		}
         try {
             return byte2hex(encrypt(data.getBytes(),key.getBytes()));
         }catch(Exception e) {
-			throw new RuntimeException(e);
+			return "";
         }
-        return null;
     }
 
 	

@@ -8,5 +8,6 @@ public class Constants {
     public final static String SUCCESS= "success";
     public final static String ERROR= "error";
     public final static String DATA = "data";
-
+    public final static Integer SUCCESS_CODE = 200;
+    public final static Integer ERROR_CODE = 404;
 }

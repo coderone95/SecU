@@ -45,6 +45,8 @@ public class User {
 	@OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<SecBankDetails> secBankDetails;
 
+	private String secret_key;
+
 	public Long getUser_id() {
 		return user_id;
 	}
@@ -115,5 +117,13 @@ public class User {
 
 	public void setSecBankDetails(List<SecBankDetails> secBankDetails) {
 		this.secBankDetails = secBankDetails;
+	}
+
+	public String getSecret_key() {
+		return secret_key;
+	}
+
+	public void setSecret_key(String secret_key) {
+		this.secret_key = secret_key;
 	}
 }

@@ -1,5 +1,7 @@
 package com.coderone95.secu.controller;
 
+import com.coderone95.secu.beans.LoginBean;
+import com.coderone95.secu.beans.SignupBean;
 import com.coderone95.secu.entity.User;
 import com.coderone95.secu.exceptions.GenericException;
 import com.coderone95.secu.model.CustomResponse;
@@ -8,6 +10,8 @@ import com.coderone95.secu.service.UserService;
 import com.coderone95.secu.utility.CryptUtils;
 import com.coderone95.secu.utility.StringUtils;
 import org.json.simple.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,58 +25,58 @@ import javax.validation.Valid;
 @RequestMapping("/api/users")
 public class UserController {
 
+    private final Logger LOGGER = LoggerFactory.getLogger(UserController.class);
+
     @Autowired
     private UserService userService;
 
-    @PostMapping(value="/register")
-    public ResponseEntity<?> addUser(@Valid  @RequestBody User user){
+    @Autowired
+    private HttpSession session;
+
+    @PostMapping(value="/signup")
+    public ResponseEntity<?> addUser(@Valid  @RequestBody SignupBean user){
+        LOGGER.info("START >> CLASS >> UserController >> METHOD >> addUser");
         JSONObject json = new JSONObject();
-        try{
-            if(StringUtils.isNullOrBlank(user.getPassword())){
-                throw new GenericException("Password is mandatory");
-            }else if(StringUtils.isNullOrBlank(user.getEmail_id())){
-                throw new GenericException("Email is mandatory");
+        if(StringUtils.isNullOrBlank(user.getPassword())){
+            throw new GenericException("Password is mandatory");
+        }else if(StringUtils.isNullOrBlank(user.getEmailId())){
+            throw new GenericException("Email is mandatory");
+        }else{
+            boolean isUserExistsByEmail = userService.isUserExistsByEmail(user.getEmailId());
+            if(isUserExistsByEmail){
+                throw new GenericException("User already exists with "+user.getEmailId());
             }else{
-                boolean isUserExistsByEmail = userService.isUserExistsByEmail(user.getEmail_id());
-                if(isUserExistsByEmail){
-                    throw new GenericException("User already exists with "+user.getEmail_id());
-                }else{
-                    json = userService.saveUser(user);
-                }
+                json = userService.saveUser(user);
             }
-        }catch(Exception e){
-            throw new GenericException(e.getMessage());
         }
         CustomResponse res = new CustomResponse(json);
+        LOGGER.info("END >> CLASS >> UserController >> METHOD >> addUser");
         return new ResponseEntity<>(res, HttpStatus.OK);
     }
 
-    @PostMapping(value="/validate_user")
-    public ResponseEntity<?> validateUser(@RequestParam("email_id") String emailId,
-                                          @RequestParam("password") String password, HttpSession session){
-        try{
-            if(StringUtils.isNullOrBlank(emailId)){
-                throw new GenericException("Please enter email address");
-            }else if(StringUtils.isNullOrBlank(password)){
-                throw new GenericException("Please enter password");
+    @PostMapping(value="/validateUser")
+    public ResponseEntity<?> validateUser(@Valid @RequestBody LoginBean user){
+        LOGGER.info("START >> CLASS >> UserController >> METHOD >> validateUser");
+        if(StringUtils.isNullOrBlank(user.getEmailId())){
+            throw new GenericException("Please enter email address");
+        }else if(StringUtils.isNullOrBlank(user.getPassword())){
+            throw new GenericException("Please enter password");
+        }else{
+            boolean isUserExistsByEmail = userService.isUserExistsByEmailAndPassword(user.getEmailId(), user.getPassword());
+            if(!isUserExistsByEmail){
+                throw new GenericException("Invalid User");
             }else{
-                boolean isUserExistsByEmail = userService.isUserExistsByEmailAndPassword(emailId,password);
-                if(!isUserExistsByEmail){
-                    throw new GenericException("Invalid User");
-                }else{
-                    User user = userService.getUserByEmailId(emailId);
-                    session.setAttribute("user_id",user.getUser_id());
-                    session.setAttribute("user_email",user.getEmail_id());
-                }
+                User u = userService.getUserByEmailId(user.getEmailId());
+                session.setAttribute("user_id",u.getUser_id());
+                session.setAttribute("user_email",u.getEmail_id());
             }
-        }catch(Exception e){
-            throw new GenericException(e.getMessage());
         }
         SuccessResponse sr = new SuccessResponse("Valid User", "SUCCESS");
+        LOGGER.info("END >> CLASS >> UserController >> METHOD >> validateUser");
         return new ResponseEntity<>(sr, HttpStatus.OK);
     }
 
-    @PostMapping(value = "/forgot_pwd")
+    @PostMapping(value = "/forgotPassword")
     public ResponseEntity<?> forgotPwd(@RequestParam("email_id") String emailId){
         try{
             if(StringUtils.isNullOrBlank(emailId)){
@@ -94,7 +98,7 @@ public class UserController {
         return new ResponseEntity<>(sr, HttpStatus.OK);
     }
 
-    @PostMapping(value = "/reset_pwd")
+    @PostMapping(value = "/resetPassword")
     public ResponseEntity<?> resetPwd(@RequestParam("email_id") String emailId,
             @RequestParam("old_pwd") String oldPwd, @RequestParam("new_pwd") String newPwd){
         try{
